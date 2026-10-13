@@ -1,0 +1,82 @@
+\section{Node, topic chính và trả lời câu hỏi}
+
+\subsection{Các node chính khi Nav2 đang chạy}
+Danh sách thu từ \code{ros2 node list} (\file{logs/06\_system\_info.log}), lọc các node liên quan:
+\begin{table}[H]\centering\small
+\begin{tabular}{p{4.6cm}p{10cm}}\toprule
+\textbf{Node} & \textbf{Chức năng}\\\midrule
+\code{/lidar\_bridge} & Cầu nối Gazebo $\to$ ROS cho \code{/scan}\\
+\code{/diffdrive\_controller} & Điều khiển bánh vi sai, phát \code{/odom} và TF \code{odom}$\to$\code{base\_link}\\
+\code{/motion\_control} & Create~3: nhận \code{/cmd\_vel}, áp dụng an toàn (reflex, \code{safety\_override})\\
+\code{/robot\_state\_publisher} & Phát TF tĩnh từ URDF (\code{base\_link}$\to$\code{rplidar\_link}, ...)\\
+\code{/map\_server} & Nạp \code{map.yaml}, phát \code{/map}\\
+\code{/amcl} & Định vị, nhận \code{/scan}, \code{/odom}, \code{/initialpose}; phát \code{/amcl\_pose}, \code{/particle\_cloud}, TF \code{map}$\to$\code{odom}\\
+\code{/bt\_navigator} & Máy chủ action \code{navigate\_to\_pose}; chạy cây hành vi\\
+\code{/planner\_server} & Lập kế hoạch toàn cục (NavFn), action \code{compute\_path\_to\_pose}\\
+\code{/controller\_server} & Điều khiển cục bộ (DWB), action \code{follow\_path}\\
+\code{/global\_costmap}, \code{/local\_costmap} & Hai bản đồ chi phí\\
+\code{/behavior\_server} & Hành vi phục hồi: \code{spin}, \code{backup}, \code{wait}\\
+\code{/smoother\_server}, \code{/velocity\_smoother} & Làm mượt đường đi và vận tốc\\
+\code{/lifecycle\_manager\_*} & Khởi động/giám sát các node vòng đời (lifecycle)\\
+\bottomrule\end{tabular}
+\caption{Node chính.}
+\end{table}
+
+\subsection{Các topic chính}
+\begin{table}[H]\centering\small
+\begin{tabular}{lll}\toprule
+\textbf{Topic} & \textbf{Kiểu} & \textbf{Ghi chú}\\\midrule
+\code{/scan} & \code{sensor\_msgs/LaserScan} & LiDAR, SLAM/AMCL/costmap đều dùng\\
+\code{/odom} & \code{nav\_msgs/Odometry} & odometry bánh xe\\
+\code{/cmd\_vel} & \code{geometry\_msgs/Twist} & lệnh vận tốc tới robot\\
+\code{/cmd\_vel\_nav} & \code{geometry\_msgs/Twist} & đầu ra controller, trước smoother\\
+\code{/tf}, \code{/tf\_static} & \code{tf2\_msgs/TFMessage} & cây TF\\
+\code{/clock} & \code{rosgraph\_msgs/Clock} & giờ mô phỏng\\
+\code{/map} & \code{nav\_msgs/OccupancyGrid} & bản đồ (SLAM hoặc \code{map\_server})\\
+\code{/initialpose} & \code{PoseWithCovarianceStamped} & vị trí ban đầu cho AMCL\\
+\code{/amcl\_pose} & \code{PoseWithCovarianceStamped} & kết quả định vị\\
+\code{/particle\_cloud} & \code{nav2\_msgs/ParticleCloud} & các hạt AMCL\\
+\code{/goal\_pose} & \code{geometry\_msgs/PoseStamped} & goal từ RViz2\\
+\code{/plan}, \code{/plan\_smoothed} & \code{nav\_msgs/Path} & đường đi toàn cục\\
+\code{/global\_costmap/costmap}, \code{/local\_costmap/costmap} & \code{nav\_msgs/OccupancyGrid} & costmap\\
+\bottomrule\end{tabular}
+\caption{Topic chính.}
+\end{table}
+Số publisher của \code{/cmd\_vel} đo được là 7 vì nhiều node (teleop, smoother, bridge, ...) cùng có thể phát; chỉ \code{velocity\_smoother} phát khi Nav2 điều khiển.
+
+\paragraph{Cây TF.} Chuỗi là \code{map} $\xrightarrow{\text{AMCL}}$ \code{odom} $\xrightarrow{\text{diffdrive}}$ \code{base\_link} $\xrightarrow{\text{URDF}}$ \code{rplidar\_link}.
+\code{odom}$\to$\code{base\_link} liên tục nhưng trôi theo thời gian; \code{map}$\to$\code{odom} do AMCL (hoặc SLAM) bù để đưa về khung bản đồ cố định.
+Ví dụ đo được: \code{tf2\_echo map base\_link} cho $(3{,}055;\,1{,}801)$, yaw $13{,}5^\circ$ khi robot đang ở gần goal 1.
+
+\subsection{Trả lời các câu hỏi ``Nội dung cần hiểu''}
+\emph{Ghi chú:} đề bài không kèm danh sách câu hỏi cụ thể trong bản em có, nên dưới đây là các câu hỏi cốt lõi về chủ đề bài;
+nếu đề có câu khác, em sẽ bổ sung.
+
+\paragraph{1. SLAM là gì, SLAM Toolbox làm gì?} SLAM (Simultaneous Localization and Mapping) là dựng bản đồ và ước lượng vị trí robot cùng lúc khi chưa biết trước cả hai.
+SLAM Toolbox là SLAM 2D dựa trên đồ thị tư thế: mỗi scan là một nút, scan matching tạo ràng buộc giữa các nút kề nhau, loop closure tạo ràng buộc giữa các nút xa nhau khi quay lại chỗ cũ, rồi bộ giải (Ceres) tối ưu toàn đồ thị để giảm lệch tích lũy.
+
+\paragraph{2. Vì sao cần cả \code{/odom} lẫn \code{/scan}?} \code{/odom} cho ước lượng chuyển động ngắn hạn, liên tục và mượt nhưng trôi (trượt bánh, sai số tích lũy). \code{/scan} đo khoảng cách tuyệt đối tới môi trường, dùng để sửa trôi qua scan matching. SLAM/AMCL lấy odometry làm giá trị dự đoán và dùng scan để hiệu chỉnh.
+
+\paragraph{3. Bản đồ lưới chiếm dụng và hai file \code{map.pgm}, \code{map.yaml}.} \code{map.pgm} là ảnh xám: 0 (đen) là có vật cản, 254 (trắng) là trống, 205 là chưa biết. \code{map.yaml} là metadata: tên ảnh, \code{resolution} (m/điểm), \code{origin} (tọa độ góc dưới trái), ngưỡng \code{occupied\_thresh}/\code{free\_thresh}, \code{negate}.
+
+\paragraph{4. Localization khác mapping thế nào? AMCL hoạt động ra sao?} Mapping dựng bản đồ chưa có; localization giữ bản đồ cố định và chỉ ước lượng vị trí robot trên đó.
+AMCL (Adaptive Monte Carlo Localization) là bộ lọc hạt: giữ một tập hạt, mỗi hạt là một giả thuyết tư thế. Bước \emph{dự đoán} di chuyển các hạt theo odometry cộng nhiễu;
+bước \emph{cập nhật} gán trọng số mỗi hạt theo mức scan hiện tại khớp bản đồ (mô hình \code{likelihood\_field}); bước \emph{lấy mẫu lại} giữ các hạt trọng số cao.
+``Adaptive'' là số hạt tự thay đổi (500--2000) theo độ bất định. Khi hạt hội tụ, sigma nhỏ (đo được khoảng 0,15\,m và $8^\circ$).
+
+\paragraph{5. Vì sao phải đặt initial pose?} Không có vị trí ban đầu, các hạt không biết bắt đầu ở đâu trên bản đồ; nhiều chỗ trong bản đồ trông giống nhau nên dễ hội tụ sai. Initial pose thu hẹp không gian tìm kiếm.
+Khi em đặt sai, AMCL ở lại tư thế lệch (xem Phần~3); có thể dùng \code{/reinitialize\_global\_localization} để rải hạt khắp bản đồ, nhưng trong lần thử của em kết quả không đáng tin (sigma khoảng 1,7--3,0\,m và vị trí ước lượng lệch xa).
+
+\paragraph{6. Vai trò các frame \code{map}, \code{odom}, \code{base\_link}?} \code{map}: khung cố định gắn với bản đồ; \code{odom}: khung liên tục nhưng trôi; \code{base\_link}: gắn với robot.
+Nav2 lập kế hoạch trong \code{map}, điều khiển cục bộ trong \code{odom} (mượt, không nhảy khi AMCL hiệu chỉnh).
+
+\paragraph{7. Nav2 lập kế hoạch và điều khiển thế nào?} Xem Phần~4: \code{planner\_server} (NavFn) tìm đường toàn cục trên global costmap; \code{controller\_server} (DWB) chọn $(v,\omega)$ bám đường đó và tránh vật cản bằng local costmap;
+\code{bt\_navigator} điều phối và kích hoạt phục hồi khi kẹt; \code{velocity\_smoother} làm mượt lệnh trước khi gửi \code{/cmd\_vel}.
+
+\paragraph{8. Costmap và inflation để làm gì?} Costmap biến bản đồ và dữ liệu cảm biến thành ``chi phí đi qua mỗi ô''. Inflation phồng vật cản bằng bán kính robot cộng biên an toàn, để chỉ cần coi robot là một điểm khi lập kế hoạch. Với \code{robot\_radius}=0,175\,m và \code{inflation\_radius}=0,45\,m, đường đi tránh sát tường (kết quả: cách tường $\ge 0{,}37$\,m).
+
+\paragraph{9. Global planner và local planner khác nhau thế nào?} Global planner nhìn toàn bản đồ, ra đường đi dài hạn nhưng bỏ qua động học và vật cản mới. Local planner nhìn cửa sổ nhỏ, chạy tần số cao (20\,Hz), tính lệnh vận tốc cụ thể có xét giới hạn tốc độ/gia tốc và vật cản vừa quan sát.
+
+\paragraph{10. Vì sao phải chạy với \code{use\_sim\_time:=true}?} Mọi node phải dùng \code{/clock} của Gazebo để mốc thời gian của TF, scan và odom khớp nhau; nếu lẫn giờ thật và giờ mô phỏng, TF báo ``extrapolation'' và các message bị loại.
+
+\paragraph{11. Vì sao đặt \code{safety\_override} và undock?} Create~3 có cơ chế an toàn (hazard, reflex) và mặc định không cho robot chạy khi còn trên dock; \code{backup\_only} cho phép Nav2 chạy mà vẫn giữ an toàn khi lùi. Undock đưa robot ra khỏi trạm sạc.

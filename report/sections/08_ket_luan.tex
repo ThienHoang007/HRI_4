@@ -1,0 +1,34 @@
+\section{Kết luận, hạn chế và liên kết}
+
+\subsection{Kết quả đạt được}
+\begin{itemize}
+\item Phần 1: robot chạy trong Gazebo; \code{/scan}, \code{/odom}, \code{/cmd\_vel} hoạt động (log \file{logs/01\_topic\_check.log}).
+\item Phần 2: dựng và lưu bản đồ \file{maps/map.pgm}, \file{maps/map.yaml}; không có tường nhân đôi.
+\item Phần 3: nạp bản đồ bằng \code{map\_server}, AMCL hội tụ (sigma khoảng 0,15\,m, $8^\circ$) sau khi đặt initial pose bằng khớp scan--bản đồ.
+\item Phần 4: Nav2 đưa robot đến cả 4 goal ở các khu vực khác nhau mà không điều khiển tay; khoảng cách nhỏ nhất tới tường 0,37\,m.
+\end{itemize}
+
+\subsection{Hạn chế và những điều cần nói thẳng}
+\begin{itemize}
+\item \textbf{World tự tạo, nhỏ hơn} world \code{maze} có sẵn; \textbf{cảm biến bị giảm tần số} bằng URDF overlay, và cần \code{LIBGL\_ALWAYS\_SOFTWARE=1}. Đề cho phép dùng môi trường có sẵn nhưng không cấm môi trường tự tạo; lý do là hiệu năng máy.
+\item \textbf{Bản đồ có hậu xử lý} bằng \code{clean\_map.py} (xóa điểm lẻ bên ngoài tường); bản thô được giữ lại trong \file{maps/map\_raw.pgm}.
+\item \textbf{Bản đồ được quét bằng lái tay}, đúng yêu cầu đề; node tự động bám tường em viết thử không dùng.
+\item \textbf{Initial pose lấy từ khớp scan--bản đồ}, nên số liệu ``AMCL trùng với khớp scan'' không phải kiểm chứng độc lập; chưa có vị trí thật từ Gazebo để so (topic ground truth lỗi QoS). Kiểm chứng định tính là tia LiDAR trùng tường và robot tới đúng các goal.
+\item \textbf{Goal 1 thất bại lần đầu} (planner không tạo được đường), thành công khi thử lại; chưa xác định chắc nguyên nhân.
+\item Số liệu goal ghi bằng script \code{send\_goals.py} (cùng action \code{NavigateToPose}); phần đặt goal bằng công cụ Nav2 Goal của RViz2 được thể hiện trong video/ảnh.
+\item Lần gửi goal thứ 5 (để chụp ảnh) thất bại với lỗi TF \emph{Transform data too old} sau khi hệ thống chạy lâu; nguyên nhân gốc chưa rõ (mục~\ref{sec:goal5}).
+\item Khi Wi-Fi rớt, Gazebo Transport (multicast) mất kết nối làm \code{/odom}, \code{/scan} ngừng; cần chạy lại mô phỏng. Đây là lỗi môi trường, không phải lỗi thuật toán.
+\end{itemize}
+
+\subsection{Liên kết}
+\begin{itemize}
+\item Video demo (Google Drive, công khai): \texttt{[LINK-VIDEO-GOOGLE-DRIVE]}
+\item GitHub repository (Public): \texttt{https://github.com/[GITHUB-USER]/[TÊN-REPO]}
+\end{itemize}
+
+\subsection{Tài liệu tham khảo}
+\begin{itemize}
+\item TurtleBot~4 Simulator: \url{https://github.com/turtlebot/turtlebot4_simulator}
+\item TurtleBot~4 User Manual: \url{https://turtlebot.github.io/turtlebot4-user-manual/}
+\item SLAM Toolbox: \url{https://github.com/SteveMacenski/slam_toolbox}; Nav2: \url{https://docs.nav2.org}
+\end{itemize}

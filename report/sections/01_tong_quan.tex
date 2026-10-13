@@ -1,0 +1,36 @@
+\section{Tổng quan và môi trường thực hiện}
+
+\subsection{Mục tiêu}
+Bài thực hành yêu cầu dùng TurtleBot~4 trong mô phỏng để (1) chạy robot trong Gazebo và kiểm tra
+\code{/scan}, \code{/odom}, \code{/cmd\_vel}; (2) dựng bản đồ bằng SLAM Toolbox và lưu \code{map.yaml},
+\code{map.pgm}; (3) nạp bản đồ và định vị bằng AMCL; (4) cho Nav2 điều hướng tự động tới ít nhất ba goal
+ở các khu vực khác nhau mà không điều khiển tay và không va chạm.
+
+\subsection{Môi trường}
+\begin{table}[H]\centering\small
+\begin{tabular}{ll}\toprule
+Hệ điều hành & Ubuntu 22.04 (Linux 6.8), cài trực tiếp\\
+ROS 2 & Humble Desktop; gói \code{turtlebot4\_simulator}, \code{turtlebot4\_navigation}, \code{nav2\_bringup}\\
+Mô phỏng & Ignition Gazebo 6 (Fortress), cầu nối \code{ros\_gz\_bridge}\\
+Máy & Inspiron 3505, CPU AMD, GPU tích hợp Radeon Vega 8, RAM 14\,GB\\
+Thế giới & \file{worlds/maze\_small.sdf}: sàn $8\times 8$\,m, có 2 vách ngăn và 2 hộp vật cản\\
+Thời gian & dùng giờ mô phỏng (\code{use\_sim\_time:=true}) cho mọi node\\
+\bottomrule\end{tabular}
+\caption{Môi trường thực hiện.}
+\end{table}
+
+\subsection{Những điều chỉnh so với cấu hình mặc định}
+Máy thực hành không render được LiDAR bằng GPU và khá chậm, nên có một số điều chỉnh. Đây là các thay đổi
+\emph{ngoài} gói TurtleBot~4 gốc, nên được nêu rõ để người chấm tái hiện được:
+\begin{itemize}
+\item \textbf{Render bằng CPU}: đặt \code{LIBGL\_ALWAYS\_SOFTWARE=1}. Khi dùng GPU Radeon Vega 8, cảm biến
+LiDAR của Gazebo (ogre2) trả về toàn bộ 640 tia bằng đúng $0{,}164$\,m (\code{range\_min}), tức bản đồ không thể dựng được.
+Log kiểm tra: \file{logs/03\_inspect\_gz.log}.
+\item \textbf{World nhỏ hơn}: world \code{maze} gốc ($\approx 20\times 20$\,m) khiến mô phỏng chỉ chạy
+khoảng 6--16\% thời gian thực. Em tự tạo world $8\times 8$\,m (sinh bằng \file{worlds/gen\_world.py}).
+\item \textbf{Giảm tần số cảm biến} bằng thư mục \file{overlay/} (bản sao URDF đặt trước trong
+\code{AMENT\_PREFIX\_PATH}): LiDAR 62\,Hz $\to$ 10\,Hz, camera OAK-D 30\,Hz $\to$ 1\,Hz, cảm biến cliff/IR giảm còn 2\,Hz.
+Nhờ đó (kèm tắt cửa sổ Gazebo khi không cần) hệ số thời gian thực lên khoảng 76\%.
+\item \textbf{Mở khóa robot}: gói Create~3 dừng robot khi đi xa trạm sạc, nên cần đặt
+\code{safety\_override=backup\_only} và gọi action \code{/undock} (script \file{scripts/unlock\_robot.sh}).
+\end{itemize}

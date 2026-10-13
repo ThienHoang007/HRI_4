@@ -1,0 +1,7 @@
+Cho action server navigate_to_pose...
+
+=== Goal 1: x=-0.4 y=5.6 yaw=3.14 ===
+Qua 600 s, huy goal
+Ket qua: -1 | 600 s (thoi gian thuc) | quang duong 10.41 m | sai so toi dich 5.13 m | khoang cach nho nhat toi vat can 0.50 m
+
+Khoang cach nho nhat toi vat can trong ca hanh trinh: 0.50 m (robot ban kinh 0.175 m; < 0.2 m nghia la sat/cham tuong)

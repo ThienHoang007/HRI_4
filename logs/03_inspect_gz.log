@@ -1,0 +1,39 @@
+== Gazebo raw scan (tom tat) ==
+frame: "turtlebot4::rplidar_link::rplidar"
+angle_min: -3.1415926535897931
+angle_max: 3.1415926535897931
+range_min: 0.164
+range_max: 12
+count: 640
+vertical_count: 1
+so gia tri ranges:  640
+gia tri ranges khac nhau (5 dau):
+    640 ranges: 0.164
+
+== Pose that cua robot trong Gazebo ==
+}
+pose {
+  name: "turtlebot4"
+  id: 148
+  position {
+    x: -0.069688358699505251
+    y: 0.17271505639343204
+    z: -0.004490322655238117
+  }
+  orientation {
+    x: -0.0012918047347003558
+    y: -0.0019817073747096545
+    z: -0.498234167931268
+    w: 0.86703928283685372
+  }
+
+== Mo hinh trong world ==
+
+Requesting state for world [maze]...
+
+Available models:
+    - ground_plane
+    - border
+    - obstacles
+    - standard_dock
+    - turtlebot4

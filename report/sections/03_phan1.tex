@@ -1,0 +1,43 @@
+\section{Phần 1 -- TurtleBot 4 trong Gazebo}
+
+\subsection{Các bước thực hiện}
+\begin{lstlisting}[language=bash,numbers=none]
+scripts/kill_sim.sh                 # don tien trinh cu
+scripts/start_sim.sh gui:=true      # Gazebo + robot (cua so Gazebo)
+scripts/unlock_robot.sh             # safety_override=backup_only + /undock
+source /opt/ros/humble/setup.bash
+ros2 launch turtlebot4_viz view_robot.launch.py use_sim_time:=true    # RViz2
+scripts/check_topics.sh             # ghi logs/01_topic_check.log
+\end{lstlisting}
+Script \code{unlock\_robot.sh} chờ đến khi node \code{/motion\_control} sẵn sàng rồi mới đặt tham số và undock:
+\begin{lstlisting}[language=bash,caption={\file{scripts/unlock\_robot.sh}.}]
+until ros2 param get /motion_control safety_override >/dev/null 2>&1; do sleep 2; done
+ros2 param set /motion_control safety_override backup_only
+ros2 action send_goal /undock irobot_create_msgs/action/Undock "{}"
+\end{lstlisting}
+Nếu gửi \code{/undock} khi Gazebo chưa lên hẳn thì goal bị \emph{rejected}; chỉ cần chạy lại script.
+
+\subsection{Kết quả kiểm tra topic}
+Log thật từ \file{scripts/check\_topics.sh} (rút gọn):
+\begin{lstlisting}[numbers=none,basicstyle=\ttfamily\footnotesize,caption={Kiểm tra \code{/scan}, \code{/odom}, \code{/cmd\_vel} (\file{logs/01\_topic\_check.log}).}]
+$ ros2 topic list | grep -E "^/(scan|odom|cmd_vel|tf|clock)$"
+/clock  /cmd_vel  /odom  /scan  /tf
+
+$ ros2 topic info /scan -v      -> sensor_msgs/msg/LaserScan,  publisher: lidar_bridge
+$ ros2 topic info /odom -v      -> nav_msgs/msg/Odometry,      publisher: diffdrive_controller
+$ ros2 topic info /cmd_vel -v   -> geometry_msgs/msg/Twist,    publisher: cmd_vel_bridge
+
+$ ros2 topic hz /scan   (6 s)   average rate: 2.250   (theo gio thuc cua may)
+$ ros2 topic hz /odom   (6 s)   average rate: 21.410
+$ ros2 topic echo /odom --once
+header: {stamp: {sec: 1283}, frame_id: odom}      child_frame_id: base_link
+\end{lstlisting}
+\begin{itemize}
+\item \code{/scan} do \code{lidar\_bridge} (\code{ros\_gz\_bridge}) chuyển từ Gazebo sang ROS; mỗi bản tin có 640 tia, $-\pi\ldots\pi$, \code{range\_max}=12\,m.
+\item \code{/odom} do \code{diffdrive\_controller} (ros2\_control) phát từ encoder bánh xe mô phỏng, frame \code{odom}$\to$\code{base\_link}.
+\item \code{/cmd\_vel} nhận \code{Twist}; node \code{motion\_control} của Create~3 lọc lệnh rồi chuyển cho bộ điều khiển bánh. Khi đang có hành vi tự động (undock/dock), lệnh tay bị bỏ qua (log: \emph{Ignoring velocities commanded while an autonomous behavior is running}).
+\end{itemize}
+Tần số trên là theo \emph{giờ thực} của máy nên thấp hơn tần số trong mô phỏng (LiDAR đặt 10\,Hz theo giờ mô phỏng). Hệ số thời gian thực đo được
+khoảng 76\% khi chạy Gazebo không có GUI và thấp hơn khi mở GUI, vì máy phải render cảm biến bằng CPU.
+
+\anh{fig_rviz_robot.png}{RViz2 (cấu hình \code{turtlebot4\_viz}, nhìn từ trên): mô hình robot, tia LiDAR (điểm đỏ) và các frame TF; bên trái là danh sách hiển thị (RobotModel, TF, LaserScan, Map, \ldots).}

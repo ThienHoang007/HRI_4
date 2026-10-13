@@ -1,0 +1,100 @@
+### ros2 node list (nav2 + localization)
+/amcl
+/behavior_server
+/bt_navigator
+/bt_navigator_navigate_through_poses_rclcpp_node
+/bt_navigator_navigate_to_pose_rclcpp_node
+/controller_manager
+/controller_server
+/diffdrive_controller
+/global_costmap/global_costmap
+/lidar_bridge
+/lifecycle_manager_localization
+/lifecycle_manager_navigation
+/local_costmap/local_costmap
+/map_server
+/motion_control
+/planner_server
+/robot_state
+/robot_state_publisher
+/rplidar_stf
+/smoother_server
+/velocity_smoother
+/waypoint_follower
+
+### ros2 topic list -t (chinh)
+/amcl_pose [geometry_msgs/msg/PoseWithCovarianceStamped]
+/clock [rosgraph_msgs/msg/Clock]
+/cmd_vel [geometry_msgs/msg/Twist]
+/cmd_vel_nav [geometry_msgs/msg/Twist]
+/cmd_vel_teleop [geometry_msgs/msg/Twist]
+/global_costmap/costmap [nav_msgs/msg/OccupancyGrid]
+/goal_pose [geometry_msgs/msg/PoseStamped]
+/initialpose [geometry_msgs/msg/PoseWithCovarianceStamped]
+/local_costmap/costmap [nav_msgs/msg/OccupancyGrid]
+/map [nav_msgs/msg/OccupancyGrid]
+/map_server/transition_event [lifecycle_msgs/msg/TransitionEvent]
+/map_updates [map_msgs/msg/OccupancyGridUpdate]
+/odom [nav_msgs/msg/Odometry]
+/particle_cloud [nav2_msgs/msg/ParticleCloud]
+/plan [nav_msgs/msg/Path]
+/plan_smoothed [nav_msgs/msg/Path]
+/planner_server/transition_event [lifecycle_msgs/msg/TransitionEvent]
+/received_global_plan [nav_msgs/msg/Path]
+/scan [sensor_msgs/msg/LaserScan]
+/tf [tf2_msgs/msg/TFMessage]
+/tf_static [tf2_msgs/msg/TFMessage]
+
+### ros2 topic info /scan /odom /cmd_vel
+Type: sensor_msgs/msg/LaserScan
+Publisher count: 1
+Subscription count: 4
+Type: nav_msgs/msg/Odometry
+Publisher count: 1
+Subscription count: 4
+Type: geometry_msgs/msg/Twist
+Publisher count: 7
+Subscription count: 1
+
+### tan so
+/scan: average rate: 3.250
+/odom: average rate: 14.577
+/amcl_pose: 
+### TF map -> base_link
+At time 1200.525000000
+- Translation: [3.055, 1.801, 0.000]
+- Rotation: in Quaternion (xyzw) [0.000, 0.000, 0.117, 0.993]
+- Rotation: in RPY (radian) [0.000, -0.000, 0.235]
+- Rotation: in RPY (degree) [0.000, -0.000, 13.485]
+
+### ros2 action list
+/backup
+/compute_path_through_poses
+/compute_path_to_pose
+/follow_path
+/follow_waypoints
+/navigate_through_poses
+/navigate_to_pose
+/navigate_to_position
+/spin
+/wall_follow
+
+### lifecycle
+map_server: active [3]
+amcl: active [3]
+planner_server: active [3]
+controller_server: active [3]
+bt_navigator: active [3]
+
+### Nav2 tham so chinh
+/controller_server FollowPath.plugin = String value is: dwb_core::DWBLocalPlanner
+/controller_server FollowPath.max_vel_x = Double value is: 0.26
+/controller_server FollowPath.max_vel_theta = Double value is: 1.0
+/controller_server general_goal_checker.xy_goal_tolerance = Double value is: 0.25
+/planner_server GridBased.plugin = String value is: nav2_navfn_planner/NavfnPlanner
+/global_costmap/global_costmap robot_radius = Double value is: 0.175
+/global_costmap/global_costmap inflation_layer.inflation_radius = Double value is: 0.45
+/local_costmap/local_costmap inflation_layer.inflation_radius = Double value is: 0.45
+/amcl robot_model_type = String value is: nav2_amcl::DifferentialMotionModel
+/amcl max_particles = Integer value is: 2000
+/amcl laser_model_type = String value is: likelihood_field

@@ -1,0 +1,63 @@
+% Bao cao Bai thuc hanh 04 - TurtleBot 4 Simulation co ban
+% Bien dich: xelatex report.tex  (chay 2 lan)   hoac   lualatex report.tex
+\documentclass[11pt,a4paper]{article}
+\usepackage[a4paper,margin=2.3cm]{geometry}
+\usepackage{fontspec}
+\setmainfont{Liberation Serif}
+\setsansfont{Liberation Sans}
+\setmonofont{DejaVu Sans Mono}[Scale=0.82]
+\usepackage{amsmath}
+\usepackage{graphicx,xcolor,booktabs,float,caption,subcaption,enumitem,longtable,listings}
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta,fit,backgrounds}
+\usepackage[hidelinks]{hyperref}
+\graphicspath{{../figures/}{figures/}}
+\setlist{itemsep=2pt,topsep=3pt}
+\captionsetup{font=small,labelfont=bf}
+\renewcommand{\figurename}{Hình}
+\renewcommand{\tablename}{Bảng}
+\renewcommand{\contentsname}{Mục lục}
+\renewcommand{\abstractname}{Tóm tắt}
+\renewcommand{\lstlistingname}{Mã}
+
+\definecolor{codebg}{gray}{0.96}
+\definecolor{cmt}{rgb}{0.15,0.45,0.15}
+\definecolor{kw}{rgb}{0.1,0.2,0.65}
+\lstset{basicstyle=\ttfamily\small,backgroundcolor=\color{codebg},frame=single,
+  rulecolor=\color{black!25},breaklines=true,breakatwhitespace=false,columns=fullflexible,
+  keepspaces=true,showstringspaces=false,commentstyle=\color{cmt},keywordstyle=\color{kw},
+  numbers=left,numberstyle=\tiny\color{gray},xleftmargin=1.6em,framexleftmargin=1.2em,
+  aboveskip=6pt,belowskip=4pt,captionpos=b}
+\lstdefinelanguage{yaml}{morekeywords={true,false,True,False},sensitive=true,
+  morecomment=[l]{\#},morestring=[b]",morestring=[b]'}
+\lstdefinelanguage{bash}{morekeywords={source,export,exec,until,do,done,for,in,echo,set,if,then,fi},
+  morecomment=[l]{\#}}
+
+% Chen anh neu co; neu chua co file thi hien khung nhac chup anh.
+\newcommand{\anh}[3][0.92]{%
+  \IfFileExists{../figures/#2}{%
+    \begin{figure}[H]\centering\includegraphics[width=#1\linewidth]{#2}\caption{#3}\end{figure}}{%
+    \begin{figure}[H]\centering\fbox{\parbox{0.85\linewidth}{\centering\small\vspace{6pt}
+      \textbf{[CHÈN ẢNH]} \texttt{figures/\detokenize{#2}}\\#3\vspace{6pt}}}\caption{#3 (chưa có ảnh)}\end{figure}}}
+\newcommand{\code}[1]{\texttt{#1}}
+\newcommand{\file}[1]{\texttt{\small #1}}
+
+\begin{document}
+\input{sections/00_trang_bia}
+\begin{abstract}\noindent
+Báo cáo trình bày việc chạy TurtleBot~4 trong Gazebo (Ignition Fortress) trên ROS~2 Humble,
+dựng bản đồ bằng SLAM Toolbox, định vị trên bản đồ đã lưu bằng AMCL và điều hướng tự động bằng Nav2.
+Báo cáo mô tả cấu trúc chương trình, các node/topic chính, cách Nav2 lập kế hoạch và điều khiển robot,
+kèm kết quả đo thực tế và những hạn chế gặp phải khi chạy trên máy không có GPU phù hợp.
+\end{abstract}
+\tableofcontents
+\newpage
+\input{sections/01_tong_quan}
+\input{sections/02_cau_truc}
+\input{sections/03_phan1}
+\input{sections/04_phan2}
+\input{sections/05_phan3}
+\input{sections/06_phan4}
+\input{sections/07_cau_hoi}
+\input{sections/08_ket_luan}
+\end{document}

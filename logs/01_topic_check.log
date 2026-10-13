@@ -1,0 +1,124 @@
+$ ros2 topic list | grep -E "^/(scan|odom|cmd_vel|tf|clock)$"
+/clock
+/cmd_vel
+/odom
+/scan
+/tf
+
+$ ros2 topic info /scan -v
+Type: sensor_msgs/msg/LaserScan
+
+Publisher count: 1
+
+Node name: lidar_bridge
+Node namespace: /
+Topic type: sensor_msgs/msg/LaserScan
+Endpoint type: PUBLISHER
+GID: 01.0f.06.b1.cf.43.d5.c5.00.00.00.00.00.00.13.03.00.00.00.00.00.00.00.00
+QoS profile:
+  Reliability: RELIABLE
+  History (Depth): UNKNOWN
+
+$ ros2 topic info /odom -v
+Type: nav_msgs/msg/Odometry
+
+Publisher count: 1
+
+Node name: diffdrive_controller
+Node namespace: /
+Topic type: nav_msgs/msg/Odometry
+Endpoint type: PUBLISHER
+GID: 01.0f.06.b1.65.45.27.49.00.00.00.00.00.00.67.03.00.00.00.00.00.00.00.00
+QoS profile:
+  Reliability: RELIABLE
+  History (Depth): UNKNOWN
+
+$ ros2 topic info /cmd_vel -v
+Type: geometry_msgs/msg/Twist
+
+Publisher count: 7
+
+Node name: cmd_vel_bridge
+Node namespace: /
+Topic type: geometry_msgs/msg/Twist
+Endpoint type: PUBLISHER
+GID: 01.0f.06.b1.69.43.35.eb.00.00.00.00.00.00.13.03.00.00.00.00.00.00.00.00
+QoS profile:
+  Reliability: RELIABLE
+  History (Depth): UNKNOWN
+
+$ ros2 topic hz /scan   (6 s)
+average rate: 2.250
+	min: 0.038s max: 0.885s std dev: 0.29990s window: 4
+
+$ ros2 topic hz /odom   (6 s)
+average rate: 22.970
+	min: 0.001s max: 0.259s std dev: 0.05080s window: 26
+average rate: 21.410
+	min: 0.001s max: 0.259s std dev: 0.04506s window: 46
+
+$ ros2 topic echo /odom --once
+A message was lost!!!
+	total count change:1
+	total count: 1---
+header:
+  stamp:
+    sec: 1283
+    nanosec: 493000000
+  frame_id: odom
+child_frame_id: base_link
+pose:
+  pose:
+    position:
+      x: 0.8697137971602604
+      y: 3.597764076774934
+      z: 0.0
+    orientation:
+      x: 0.0
+      y: 0.0
+      z: 0.4702225934737286
+      w: 0.8825478528594586
+  covariance:
+  - 0.001
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.001
+  - 0.0
+Traceback (most recent call last):
+  File "/opt/ros/humble/bin/ros2", line 33, in <module>
+    sys.exit(load_entry_point('ros2cli==0.18.20', 'console_scripts', 'ros2')())
+  File "/opt/ros/humble/lib/python3.10/site-packages/ros2cli/cli.py", line 91, in main
+    rc = extension.main(parser=parser, args=args)
+  File "/opt/ros/humble/lib/python3.10/site-packages/ros2topic/command/topic.py", line 41, in main
+    return extension.main(args=args)
+  File "/opt/ros/humble/lib/python3.10/site-packages/ros2topic/verb/echo.py", line 235, in main
+    self.subscribe_and_spin(
+  File "/opt/ros/humble/lib/python3.10/site-packages/ros2topic/verb/echo.py", line 276, in subscribe_and_spin
+    rclpy.spin_until_future_complete(node, self.future)
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/__init__.py", line 256, in spin_until_future_complete
+    executor.spin_until_future_complete(future, timeout_sec)
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 337, in spin_until_future_complete
+    self.spin_once_until_future_complete(future, timeout_sec)
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 819, in spin_once_until_future_complete
+    self._spin_once_impl(timeout_sec)
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 809, in _spin_once_impl
+    raise handler.exception()
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/task.py", line 309, in _execute_coroutine_step
+    result = coro.send(None)
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 488, in handler
+    await call_coroutine(entity, arg)
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 407, in _execute_subscription
+    await await_or_execute(sub.callback, msg)
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 110, in await_or_execute
+    return callback(*args)
+  File "/opt/ros/humble/lib/python3.10/site-packages/ros2topic/verb/echo.py", line 299, in _subscriber_callback
+    self.print_func(
+  File "/opt/ros/humble/lib/python3.10/site-packages/ros2topic/verb/echo.py", line 311, in _print_yaml
+    print(
+BrokenPipeError: [Errno 32] Broken pipe
+Exception ignored in: <_io.TextIOWrapper name='<stdout>' mode='w' encoding='utf-8'>
+BrokenPipeError: [Errno 32] Broken pipe

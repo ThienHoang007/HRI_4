@@ -1,0 +1,85 @@
+\section{Phần 2 -- Xây dựng bản đồ bằng SLAM Toolbox}
+
+\subsection{Cách SLAM Toolbox hoạt động trong bài}
+SLAM Toolbox nhận \code{/scan} và TF \code{odom}$\rightarrow$\code{base\_link}. Với mỗi scan đủ điều kiện (robot đã di chuyển
+quá ngưỡng), nó \emph{scan matching} với các scan trước để hiệu chỉnh vị trí, thêm một nút vào đồ thị tư thế, rồi giải tối ưu đồ thị
+(Ceres) khi có \emph{loop closure}. Kết quả là bản đồ lưới chiếm dụng trên \code{/map} và phép biến đổi \code{map}$\rightarrow$\code{odom}.
+Launch dùng là \code{turtlebot4\_navigation/slam.launch.py}, chỉ đổi file cấu hình và chọn node bất đồng bộ:
+\begin{lstlisting}[language=bash,caption={\file{scripts/start\_slam.sh}.}]
+exec ros2 launch turtlebot4_navigation slam.launch.py use_sim_time:=true sync:=false \
+  params:="$DIR/config/slam_small.yaml" "$@"
+\end{lstlisting}
+
+\subsection{Chỉnh tham số cho mô phỏng chậm}
+Với cấu hình mặc định, node đồng bộ (\code{sync:=true}) xử lý từng scan nên hàng đợi tăng
+(\emph{Queue size has grown to: 40}), bản đồ cập nhật chậm và nhiễu. Em dùng node bất đồng bộ (\code{sync:=false}: bỏ qua scan khi đang bận)
+và chỉnh \file{config/slam\_small.yaml} từ bản gốc \code{slam.yaml}:
+\begin{table}[H]\centering\small
+\begin{tabular}{lcc}\toprule
+Tham số & Gốc & Dùng\\\midrule
+\code{throttle\_scans} & 1 & 2\\
+\code{map\_update\_interval} & 0.5 & 1.0\\
+\code{max\_laser\_range} & 12.0 & 10.0\\
+\code{minimum\_time\_interval} & 0.25 & 0.4\\
+\code{transform\_timeout} & 0.2 & 0.5\\
+\code{minimum\_travel\_distance} & 0.0 & 0.05\\
+\code{minimum\_travel\_heading} & 0.0 & 0.1\\
+\code{scan\_buffer\_maximum\_scan\_distance} & 12.0 & 10.0\\
+\bottomrule\end{tabular}
+\caption{Tham số SLAM Toolbox đã thay đổi so với \code{slam.yaml} gốc (các tham số còn lại giữ nguyên: Ceres, \code{resolution: 0.05}, \code{do\_loop\_closing: true}).}
+\end{table}
+\code{minimum\_travel\_*} lớn hơn 0 giúp không thêm scan khi robot đứng yên (tránh nhiễu tích lũy); \code{transform\_timeout} lớn hơn để
+chịu được TF đến muộn trên máy chậm.
+
+\subsection{Điều khiển bằng teleoperation}
+Bản đồ được quét bằng \code{teleop\_twist\_keyboard} với tốc độ rất thấp để scan matching ổn định:
+\begin{lstlisting}[language=bash,caption={\file{scripts/teleop\_slow.sh} (dùng 0,05\,m/s và 0,2\,rad/s).}]
+ros2 run teleop_twist_keyboard teleop_twist_keyboard --ros-args -p speed:="$SPEED" -p turn:="$TURN"
+\end{lstlisting}
+Phím: \code{i} tiến, \code{,} lùi, \code{j}/\code{l} quay trái/phải, \code{k} dừng. Lái đi dọc các tường, vòng qua hai hộp vật cản và qua
+khe giữa hai khu để robot quét hết khu vực có thể di chuyển, đồng thời quan sát bản đồ hình thành trong RViz2.
+Em đã thử viết thêm một node tự động bám tường nhưng \textbf{không dùng} (không cho bản đồ tốt); bản đồ nộp là do lái tay.
+
+\anh[0.85]{fig_slam_progress.png}{Bản đồ đang hình thành trong RViz2 khi chạy SLAM Toolbox và lái robot bằng teleop: vùng xám chưa biết, vùng trắng đã quét, tia LiDAR màu đỏ trùng với tường.}
+
+\subsection{Lưu bản đồ}
+\begin{lstlisting}[language=bash,caption={\file{scripts/save\_map.sh} (rút gọn).}]
+ros2 run nav2_map_server map_saver_cli -f "$DIR/maps/map" --ros-args \
+  -p save_map_timeout:=20.0 -p free_thresh_default:=0.25 -p occupied_thresh_default:=0.65
+\end{lstlisting}
+Kết quả là hai file \file{maps/map.pgm} (ảnh $262\times 220$ điểm, 0,05\,m/điểm) và \file{maps/map.yaml}:
+\begin{lstlisting}[language=yaml,caption={\file{maps/map.yaml}.}]
+image: map.pgm
+mode: trinary
+resolution: 0.05
+origin: [-4.9, -2.32, 0]
+negate: 0
+occupied_thresh: 0.65
+free_thresh: 0.25
+\end{lstlisting}
+Ý nghĩa: \code{resolution} là kích thước một điểm ảnh (m); \code{origin} là tọa độ góc dưới-trái của ảnh trong frame \code{map};
+điểm có xác suất chiếm dụng $>0{,}65$ là tường (đen), $<0{,}25$ là trống (trắng), còn lại là chưa biết (xám). Gốc
+\code{map} trùng vị trí robot ngay sau khi undock, vì SLAM được bật ở đó.
+
+\subsection{Hậu xử lý bản đồ (cần nêu rõ)}
+Bản đồ thô từ SLAM có nhiều điểm lẻ \emph{bên ngoài} tường: tia LiDAR lọt qua khe hở nhỏ giữa các tấm tường ở góc và để lại các
+vệt trống/vật cản rời rạc. Đây không phải tường nhân đôi, nhưng làm bản đồ xấu và làm Nav2 thấy ``vật cản ma''.
+Em dùng \file{scripts/clean\_map.py}: (i) co (erode) vùng trống bán kính 2 điểm rồi lấy thành phần liên thông lớn nhất, (ii) nở (dilate)
+trở lại trong vùng trống gốc, (iii) chỉ giữ ô tường sát vùng đó ($\le 2$ điểm), phần còn lại đặt thành ``chưa biết''.
+\begin{lstlisting}[language=Python,caption={Lõi của \file{scripts/clean\_map.py}.}]
+core = largest_component(erode(free, 2))
+room = dilate(core, 2) & free                 # vung free that su cua arena
+keep_occ = occ & dilate(room, 2)              # tuong sat vung free
+out = np.full_like(img, UNK)                  # UNK = 205 (xam)
+out[room] = FREE                              # FREE = 254
+out[keep_occ] = OCC                           # OCC = 0
+\end{lstlisting}
+Kết quả: ô trống 25\,412 $\to$ 23\,048, ô tường 2\,892 $\to$ 1\,929. Cấu trúc bên trong (tường, vách, hai hộp) được giữ nguyên;
+bản gốc lưu ở \file{maps/map\_raw.pgm}.
+\anh{fig_map_raw_vs_clean.png}{Bản đồ thô từ SLAM (trái) và sau hậu xử lý (phải).}
+\anh[0.8]{fig_map_final.png}{Bản đồ cuối cùng \file{maps/map.pgm}. Trục tính bằng mét trong frame \code{map}; hai hộp vật cản hiện là khối xám vì LiDAR chỉ thấy mặt ngoài.}
+
+\subsection{Đánh giá}
+Bản đồ có đủ tường biên, vách dọc, vách ngang (hành lang phía bắc) và hai hộp vật cản; không có tường nhân đôi hay vùng lệch rõ rệt.
+Toàn bộ bản đồ bị xoay nhẹ khoảng $5^\circ$ so với hệ trục lưới, vì gốc \code{map} lấy theo hướng robot lúc bắt đầu quét, không phải theo
+trục của world. Điều này không ảnh hưởng đến localization và navigation vì chúng chỉ dùng chính bản đồ này.

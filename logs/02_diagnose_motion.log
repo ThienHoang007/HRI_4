@@ -1,0 +1,24 @@
+== Bo nho ==
+               total        used        free      shared  buff/cache   available
+Mem:           13862        5701        1121         144        7039        7693
+Swap:           2047          13        2034
+
+== Process Gazebo / RViz2 con song? ==
+51338 /bin/sh -c ruby /usr/bin/ign gazebo /home/thienhoang/Documents/HRI/5/tb4_slam_nav/worlds/maze_small.sdf -r -v 2 --
+51343 ign gazebo /home/thienhoang/Documents/HRI/5/tb4_slam_nav/worlds/maze_small.sdf -r -v 2 --gui-config /opt/ros/humbl
+51727 ign gazebo server                                                                                                 
+51728 ign gazebo gui                                                                                                    
+
+== Toc do mo phong: so sanh /clock voi dong ho that ==
+wall: 1791898691 -> 1791898703 ; sim: 3 -> 3
+real-time factor ~ 0 %
+
+$ ros2 topic echo /dock_status --once
+header:
+  stamp:
+    sec: 3
+    nanosec: 951000000
+  frame_id: ''
+dock_visible: true
+is_docked: true
+---

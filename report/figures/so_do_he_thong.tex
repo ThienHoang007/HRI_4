@@ -1,0 +1,60 @@
+% So do he thong (toa do tuyet doi, don vi cm). Mui ten len: du lieu cam bien; mui ten xuong: lenh.
+\begin{tikzpicture}[x=1cm, y=1cm, font=\small, >=Stealth,
+  box/.style={draw, rounded corners=2pt, minimum height=9mm, minimum width=36mm, align=center, fill=#1},
+  arr/.style={->, thick},
+  msg/.style={font=\scriptsize\ttfamily, fill=white, inner sep=1pt},
+  grp/.style={draw=#1!70!black, dashed, rounded corners=5pt, fill=#1!8, inner sep=3.5mm},
+  glab/.style={font=\footnotesize\bfseries, anchor=south west, inner sep=2pt}]
+% ---- giao dien nguoi dung
+\node[box=gray!20]   (rviz)   at (9.6, 0)     {RViz2\\công cụ \emph{Nav2 Goal}, \emph{2D Pose Estimate}};
+% ---- Nav2
+\node[box=blue!15]   (bt)     at (4.8, -2.2)  {bt\_navigator\\(cây hành vi)};
+\node[box=blue!15]   (plan)   at (0,   -2.2)  {planner\_server\\NavFn + global costmap};
+\node[box=blue!15]   (beh)    at (9.6, -2.2)  {behavior\_server\\spin, backup, wait};
+\node[box=blue!15]   (ctrl)   at (0,   -4.2)  {controller\_server\\DWB + local costmap};
+\node[box=blue!15]   (vs)     at (4.8, -4.2)  {velocity\_smoother};
+% ---- ban do va dinh vi
+\node[box=green!20]  (slam)   at (0,   -6.4)  {SLAM Toolbox\\(Phần 2)};
+\node[box=green!20]  (files)  at (4.8, -6.4)  {maps/map.yaml\\maps/map.pgm};
+\node[box=green!20]  (amcl)   at (9.6, -6.4)  {map\_server + AMCL\\(Phần 3)};
+% ---- robot va mo phong
+\node[box=yellow!25] (bridge) at (0,   -9.6)  {ros\_gz\_bridge\\(lidar, clock)};
+\node[box=yellow!25] (create) at (4.8, -9.6)  {Create 3: motion\_control\\diffdrive\_controller};
+\node[box=yellow!25] (rsp)    at (9.6, -9.6)  {robot\_state\_publisher\\URDF (overlay)};
+\node[box=orange!25] (gz)     at (2.4, -11.6) {Ignition Gazebo\\world \texttt{maze\_small}};
+\node[box=gray!20]   (teleop) at (13.8,-11.6) {teleop\_twist\_keyboard\\(Phần 2)};
+% ---- nhom
+\begin{scope}[on background layer]
+  \node[grp=blue,   fit=(bt)(plan)(beh)(ctrl)(vs)]      (gnav) {};
+  \node[grp=green,  fit=(slam)(files)(amcl)]            (gloc) {};
+  \node[grp=orange, fit=(bridge)(create)(rsp)(gz)]      (gsim) {};
+\end{scope}
+\node[glab] at (gnav.north west) {Nav2 (Phần 4)};
+\node[glab] at (gloc.north west) {Bản đồ và định vị};
+\node[glab] at (gsim.north west) {Mô phỏng và robot (Phần 1)};
+% ---- bus topic cam bien
+\draw[line width=2.2pt, gray!60] (-1.9,-8.1) -- (11.5,-8.1)
+  node[pos=0.5, below, font=\scriptsize\ttfamily, fill=white, inner sep=1pt] {/scan, /odom, /tf, /tf\_static, /clock};
+\draw[arr] (bridge.north) -- (bridge.north |- 0,-8.1);
+\draw[arr] (create.north) -- (create.north |- 0,-8.1);
+\draw[arr] (rsp.north)    -- (rsp.north |- 0,-8.1);
+\draw[arr] (slam.south |- 0,-8.1) -- (slam.south);
+\draw[arr] (amcl.south |- 0,-8.1) -- (amcl.south);
+% ---- mo phong
+\draw[<->, thick] (gz) -- node[msg, left=1pt] {cảm biến} (bridge.south);
+\draw[<->, thick] (gz) -- node[msg, right=1pt] {ros2\_control} (create.south);
+% ---- ban do
+\draw[arr] (slam) -- node[msg, above] {map\_saver} (files);
+\draw[arr] (files) -- node[msg, above] {map\_server} (amcl);
+\draw[arr] (amcl.north west) -- node[msg, sloped, above] {TF map$\to$odom, /map} (bt.south east);
+% ---- Nav2
+\draw[arr] (rviz) -- node[msg, sloped, above] {/goal\_pose} (bt.north east);
+\draw[arr] (rviz.east) -- (12.3,0) |- node[msg, pos=0.25, right] {/initialpose} (amcl.east);
+\draw[arr] (bt) -- node[msg, above] {compute\_path} (plan);
+\draw[arr] (bt) -- (beh);
+\draw[arr] (bt) -- node[msg, sloped, above] {follow\_path} (ctrl.north east);
+\draw[arr] (plan) -- node[msg, right] {/plan} (ctrl);
+\draw[arr] (ctrl) -- node[msg, above] {/cmd\_vel\_nav} (vs);
+\draw[arr] (vs.east) -- (7.3,-4.2) -- (7.3,-8.7) -- (5.9,-8.7) node[msg, pos=0.0, right] {/cmd\_vel} -- (5.9,-9.15);
+\draw[arr] (teleop.north) |- node[msg, pos=0.75, above] {/cmd\_vel} (create.east);
+\end{tikzpicture}

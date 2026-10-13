@@ -1,0 +1,99 @@
+\section{Cấu trúc chương trình}
+
+\subsection{Cấu trúc repository}
+Repository chỉ chứa phần em viết thêm (launch, cấu hình, script, bản đồ); các gói TurtleBot~4, SLAM Toolbox và Nav2
+được dùng nguyên bản từ ROS~2 Humble (\code{apt}).
+
+\begin{lstlisting}[language=bash,numbers=none,caption={Cây thư mục repository.}]
+tb4_slam_nav/
+|-- launch/
+|   |-- sim_small.launch.py      # Gazebo + TurtleBot 4 trong world nho (dung chinh)
+|   `-- sim_maze.launch.py       # wrapper cho world maze goc cua TurtleBot 4
+|-- worlds/  gen_world.py, maze_small.sdf     # world 8x8 m
+|-- overlay/ turtlebot4_description, irobot_create_description   # URDF giam tan so cam bien
+|-- config/  slam_small.yaml, localization.yaml, nav2.yaml
+|-- maps/    map.yaml, map.pgm (+ map_raw.* la ban goc truoc khi loc)
+|-- scripts/ start_sim.sh, unlock_robot.sh, start_slam.sh, teleop_slow.sh, save_map.sh,
+|            clean_map.py, start_localization.sh, set_initial_pose.py, find_pose.py,
+|            start_nav2.sh, send_goals.py, kill_sim.sh, check_*.{sh,py}, make_figures.py
+|-- logs/    log terminal dung trong bao cao
+|-- figures/ hinh dung trong bao cao
+`-- report/  report.tex va cac phan (file nay)
+\end{lstlisting}
+
+\subsection{Các package ROS~2 được sử dụng}
+\begin{table}[H]\centering\small
+\begin{tabular}{p{4.9cm}p{9.6cm}}\toprule
+\textbf{Package} & \textbf{Vai trò}\\\midrule
+\code{turtlebot4\_ignition\_\allowbreak bringup} & Spawn robot, dock, cầu nối Gazebo$\leftrightarrow$ROS (\code{/scan}, \code{/odom}, \code{/cmd\_vel}, \code{/clock}, cảm biến)\\
+\code{irobot\_create\_*} & Mô hình iRobot Create~3 (đế robot): \code{motion\_control}, hazard, dock/undock, \code{diffdrive\_controller}\\
+\code{turtlebot4\_description} & URDF của robot, gắn RPLIDAR và camera OAK-D\\
+\code{slam\_toolbox} & Dựng bản đồ (node \code{async\_slam\_toolbox\_node})\\
+\code{nav2\_map\_server} & \code{map\_server} nạp \code{map.yaml}; \code{map\_saver\_cli} lưu bản đồ\\
+\code{nav2\_amcl} & Định vị Monte Carlo, phát phép biến đổi \code{map}$\rightarrow$\code{odom}\\
+\code{nav2\_*} (bringup) & \code{bt\_navigator}, \code{planner\_server}, \code{controller\_server}, \code{behavior\_server}, \code{smoother\_server}, \code{velocity\_smoother}, hai costmap\\
+\code{turtlebot4\_navigation} & Launch/cấu hình sẵn: \code{slam.launch.py}, \code{localization.launch.py}, \code{nav2.launch.py}\\
+\code{turtlebot4\_viz} & Mở RViz2 với cấu hình có bảng điều khiển Nav2 và công cụ Goal\\
+\code{teleop\_twist\_keyboard} & Lái robot bằng bàn phím khi quét bản đồ\\
+\bottomrule\end{tabular}
+\caption{Các package chính.}
+\end{table}
+
+\subsection{Sơ đồ hệ thống}
+Hình~\ref{fig:sodo} tóm tắt các node và luồng dữ liệu. Ba khối dưới cùng (mô phỏng, phần mềm robot) chạy suốt bài; khối giữa là SLAM Toolbox (Phần~2) hoặc \code{map\_server}+AMCL (Phần~3), cả hai đều cung cấp TF \code{map}$\to$\code{odom} nên không chạy đồng thời; khối trên là Nav2 (Phần~4) nhận goal từ RViz2 và phát \code{/cmd\_vel} về robot.
+\begin{figure}[tbp]\centering\resizebox{\linewidth}{!}{\input{figures/so_do_he_thong}}
+\caption{Sơ đồ các node và luồng dữ liệu chính. Mũi tên lên từ robot là dữ liệu cảm biến (bus \code{/scan}, \code{/odom}, \code{/tf}); mũi tên xuống là lệnh vận tốc \code{/cmd\_vel}. SLAM Toolbox (Phần 2) và AMCL (Phần 3) không chạy cùng lúc: cả hai đều phát TF \code{map}$\to$\code{odom}.}\label{fig:sodo}\end{figure}
+
+\subsection{Luồng chạy tổng thể}
+\begin{enumerate}
+\item \code{kill\_sim.sh}: dọn mọi tiến trình Gazebo/ROS còn sót (tiến trình trùng là nguyên nhân gây lỗi \code{Frame [map] does not exist} và robot không chạy).
+\item \code{start\_sim.sh gui:=true}: khởi động Gazebo và robot; \code{unlock\_robot.sh}: mở khóa và undock.
+\item \textbf{Phần 2}: \code{start\_slam.sh} + RViz2 + \code{teleop\_slow.sh} $\rightarrow$ \code{save\_map.sh} $\rightarrow$ \code{clean\_map.py}.
+\item \textbf{Phần 3}: tắt SLAM, khởi động lại sim, \code{start\_localization.sh}, đặt initial pose.
+\item \textbf{Phần 4}: \code{start\_nav2.sh}, đặt goal bằng công cụ \emph{Nav2 Goal} trong RViz2.
+\end{enumerate}
+
+\subsection{Launch file chính}
+Launch gốc \code{turtlebot4\_ignition.launch.py} chỉ nạp world nằm trong thư mục của package, nên không dùng
+được world của repo. \file{launch/sim\_small.launch.py} làm lại đúng các bước đó nhưng nạp world của repo:
+
+\begin{lstlisting}[language=Python,caption={Trích \file{launch/sim\_small.launch.py}: chạy Gazebo với world riêng.}]
+WORLD_NAME = 'maze_small'
+WORLD_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                          'worlds', WORLD_NAME + '.sdf')
+
+def start_gazebo(context, *args, **kwargs):
+    ...
+    ign_args = f'{WORLD_FILE} -r -v 2'
+    if gui:
+        gui_config = os.path.join(pkg_bringup, 'gui', model, 'gui.config')
+        ign_args += f' --gui-config {gui_config}'
+    else:
+        ign_args += ' -s'  # chi chay server, khong ve cua so (tiet kiem CPU)
+    return [IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(os.path.join(pkg_ros_ign_gazebo, 'launch', 'ign_gazebo.launch.py')),
+        launch_arguments=[('ign_args', ign_args)])]
+\end{lstlisting}
+Sau đó file này bắt cầu nối \code{/clock} và \emph{include} \code{turtlebot4\_spawn.launch.py} (có sẵn của
+\code{turtlebot4\_ignition\_bringup}) để spawn robot tại $(x,y)=(-2{,}5;\,-3{,}0)$. Script bao ngoài:
+
+\begin{lstlisting}[language=bash,caption={\file{scripts/start\_sim.sh}.}]
+source /opt/ros/humble/setup.bash
+export LIBGL_ALWAYS_SOFTWARE=1       # bat buoc: GPU AMD Vega 8 render LiDAR sai
+export AMENT_PREFIX_PATH="$DIR/overlay/turtlebot4_description:$DIR/overlay/irobot_create_description:$AMENT_PREFIX_PATH"
+exec ros2 launch "$DIR/launch/sim_small.launch.py" "$@"
+\end{lstlisting}
+
+\subsection{World mô phỏng}
+\code{gen\_world.py} sinh \file{maze\_small.sdf}. Tường dày $0{,}1$\,m, cao 1\,m (LiDAR đặt khoảng $0{,}3$\,m nên thấy được). Bố cục:
+\begin{lstlisting}[language=Python,caption={Danh sách tường trong \file{worlds/gen\_world.py}.}]
+WALLS = [
+    ('north', 0, 4, 8.1, T), ('south', 0, -4, 8.1, T),      # tuong bien 8x8 m
+    ('east', 4, 0, T, 8.1),  ('west', -4, 0, T, 8.1),
+    ('partition_a', -1.2, -1.75, T, 4.5),   # vach doc, chia san thanh 2 khu
+    ('partition_b', 2.25, 1.5, 3.5, T),     # vach ngang tao hanh lang phia bac
+    ('box_1', 2.0, -2.2, 1.0, 1.0),         # hai vat can hop
+    ('box_2', -2.6, 2.4, 0.8, 0.8),
+]
+\end{lstlisting}
+\anh[0.8]{fig_gazebo_arena.png}{Cửa sổ Gazebo nhìn từ trên: robot TurtleBot~4 (gần góc phải) trong world \code{maze\_small} với hai vách ngăn và hai hộp vật cản.}

@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+logs/.*.tmp
+maps/map_preview.png
+maps/.claude/
+.claude/
+report/*.aux
+report/*.log
+report/*.out
+report/*.toc
+report/build.log
+logs/.claude/
